@@ -28,7 +28,7 @@ async function main() {
         usersRoutes(new UsersController(db))
     ];
     
-    startServer(
+    await startServer(
         config.host,
         config.port,
         routes

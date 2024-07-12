@@ -1,8 +1,10 @@
 import { UsersCollection } from "./collections/users";
-import { connectToMongDb } from "./mongo-db";
+import { connectToMongDb, initCollections } from "./mongo-db";
 
 export async function initDb(uri: string, dbName: string) {
   const db = await connectToMongDb(uri, dbName)
+
+  await initCollections(db)
   
   return {
     users: new UsersCollection(db),
