@@ -1,31 +1,32 @@
 import { Request, Response, Router } from 'express';
 import { UsersController } from '../controllers';
 import z from 'zod';
-import { handleControllerError } from './errors';
-import { fromZodError } from 'zod-validation-error';
+import { handleControllerError, handleValidationError } from './errors';
 
-const newUserBodySchema = z.object({
-    name: z.string(),
-    email: z.string(),
+const newUserReqSchema = z.object({
+    body: z.object({
+        name: z.string(),
+        email: z.string(),
+    })
 });
 
-const listUsersQuerySchema = z.object({
-    created: z.union([z.literal('asc'), z.literal('desc')]).default('asc'),
+const listUsersReqSchema = z.object({
+    query: z.object({
+        created: z.union([z.literal('asc'), z.literal('desc')]).default('asc'),
+    }),
 });
 
 export function usersRoutes(usersController: UsersController) {
     const router = Router();
 
     router.post('/users', async (req: Request, res: Response) => {
-        const body = newUserBodySchema.safeParse(req.body);
-        if (!body.success) {
-            res.status(400)
-                .send({ error: fromZodError(body.error).message })
-                .end();
+        const validationResult = newUserReqSchema.safeParse(req);
+        if (!validationResult.success) {
+            handleValidationError(res, validationResult.error);
             return;
         }
 
-        const { name, email } = body.data;
+        const { name, email } = validationResult.data.body;
 
         await usersController
             .create({ name, email })
@@ -34,16 +35,16 @@ export function usersRoutes(usersController: UsersController) {
     });
 
     router.get('/users', async (req: Request, res: Response) => {
-        const query = listUsersQuerySchema.safeParse(req.query);
-        if (!query.success) {
-            res.status(400)
-                .send({ error: fromZodError(query.error).message })
-                .end();
+        const validationResult = listUsersReqSchema.safeParse(req);
+        if (!validationResult.success) {
+            handleValidationError(res, validationResult.error);
             return;
         }
 
+        const { query } = validationResult.data
+
         await usersController
-            .list(query.data.created)
+            .list(query.created)
             .then((users) => res.send(users).status(200))
             .catch(handleControllerError(res));
     });
